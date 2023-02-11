@@ -1,91 +1,86 @@
 const axios = require('axios');
-const {
-	WebhookClient,
-	EmbedBuilder
-} = require('discord.js');
+const { WebhookClient, EmbedBuilder } = require('discord.js');
 
 const apiKey = process.env.API_KEY;
-const league = [{
-		id: 2002,
-		name: 'Bundesliga',
-		thumbnail: 'https://upload.wikimedia.org/wikipedia/pt/f/f9/Bundesliga_logo_%282017%29.png'
-	},
-	{
-		id: 2021,
-		name: 'Premier League',
-		thumbnail: 'https://a1.espncdn.com/combiner/i?img=%2Fi%2Fleaguelogos%2Fsoccer%2F500%2F23.png'
-	},
-	/*{
-	  "id": 2001,
-	  "name": 'UEFA Champions League',
-	  "thumbnail": 'https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/2.png'
-	},
-	{
-	  "id": 2021,
-	  "name": 'COMEMBOL Libertadores',
-	  "thumbnail": 'https://upload.wikimedia.org/wikipedia/pt/thumb/9/95/Conmebol_Libertadores_logo.svg/2560px-Conmebol_Libertadores_logo.svg.png'
-	},*/
-	{
-		id: 2015,
-		name: 'Ligue 1',
-		thumbnail: 'https://upload.wikimedia.org/wikipedia/commons/4/49/Ligue1_Uber_Eats_logo.png'
-	}
-];
+const league = [
+   {
+    id: 2002,
+    name: 'Bundesliga',
+    thumbnail: 'https://upload.wikimedia.org/wikipedia/pt/f/f9/Bundesliga_logo_%282017%29.png'
+  },
+  {
+    id: 2021,
+    name: 'Premier League',
+    thumbnail: 'https://a1.espncdn.com/combiner/i?img=%2Fi%2Fleaguelogos%2Fsoccer%2F500%2F23.png'
+  },
+  /*{
+    "id": 2001,
+    "name": 'UEFA Champions League',
+    "thumbnail": 'https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/2.png'
+  },
+  {
+    "id": 2021,
+    "name": 'COMEMBOL Libertadores',
+    "thumbnail": 'https://upload.wikimedia.org/wikipedia/pt/thumb/9/95/Conmebol_Libertadores_logo.svg/2560px-Conmebol_Libertadores_logo.svg.png'
+  },*/
+ {
+    id: 2015,
+    name: 'Ligue 1',
+    thumbnail: 'https://upload.wikimedia.org/wikipedia/commons/4/49/Ligue1_Uber_Eats_logo.png'
+  }
+  ];
 
 async function getLiveScore(league) {
-	try {
-		const response = await axios.get(`https://api.football-data.org/v4/competitions/${league.id}/matches`, {
-			headers: {
-				'X-Auth-Token': apiKey,
-			}
-		})
-		// Aqui você pode adicionar um console.log para exibir informações detalhadas sobre o erro na resposta da API
-		console.log(response);
+  try {
+    const response = await axios.get(`https://api.football-data.org/v4/competitions/${league.id}/matches`,
+      {
+        headers: {
+          'X-Auth-Token': apiKey,
+        }
+      })
+// Aqui você pode adicionar um console.log para exibir informações detalhadas sobre o erro na resposta da API
+    console.log(response);
 
-		const liveMatches = response.data.matches.filter(match => match.status === 'LIVE')
+  const liveMatches = response.data.matches.filter(match => match.status === 'LIVE')
 
-		const embed = new EmbedBuilder()
-			.setTitle(`Placar ao vivo - ${league.name}`)
-			.setColor('#0099ff')
-			.setThumbnail(league.thumbnail);
+    const embed = new EmbedBuilder()
+      .setTitle(`Placar ao vivo - ${league.name}`)
+      .setColor('#0099ff')
+      .setThumbnail(league.thumbnail);
 
-		liveMatches.forEach(match => {
-			let score = `${match.score.fullTime.home} x ${match.score.fullTime.away}`;
-			if (match.score.penalties) {
-				score += `\nPênaltis: ${match.score.penalties.home} x ${match.score.penalties.away}`;
-			}
-			embed.addFields(`${match.home.name} x ${match.away.name}`, `${score}`, true);
+    liveMatches.forEach(match => {
+      let score = `${match.score.fullTime.home} x ${match.score.fullTime.away}`;
+      if (match.score.penalties) {
+        score += `\nPênaltis: ${match.score.penalties.home} x ${match.score.penalties.away}`;
+      }
+      embed.addFields(`${match.home.name} x ${match.away.name}`, `${score}`, true);
 
-			if (match.score.goals.home) {
-				match.score.goals.home.forEach(goal => {
-					embed.addFields(`${match.home.name} gol`, `${goal.minute} - ${goal.scorer.name}`, true);
-				});
-			}
-		});
+      if (match.score.goals.home) {
+        match.score.goals.home.forEach(goal => {
+          embed.addFields(`${match.home.name} gol`, `${goal.minute} - ${goal.scorer.name}`, true);
+        });
+      }
+    });
 
-		return embed;
-	} catch (error) {
-		console.error(error);
-		console.log(error);
-	}
+    return embed;
+  } catch (error) {
+    console.error(error);
+    console.log(error);
+  }
 }
-
+ 
 module.exports = async (req, res) => {
-	const discordWebhookUrl = process.env.WEBHOOK_URL;
+  const discordWebhookUrl = process.env.WEBHOOK_URL;
 
-	const client = new WebhookClient({
-		url: discordWebhookUrl
-	});
+  const client = new WebhookClient({url: discordWebhookUrl});
 
-	const promises = league.map(league => getLiveScore(league));
-	const liveScores = await Promise.all(promises);
+  const promises = league.map(league => getLiveScore(league));
+  const liveScores = await Promise.all(promises);
 
-	liveScores.forEach(liveScore => {
-		client.send({
-			embeds: [liveScore]
-		});
-	});
-	console.log("Tudo pronto")
+  liveScores.forEach(liveScore => {
+    client.send({ embeds: [liveScore] });
+  });
+  console.log("Tudo pronto")
 
-	res.status(200).send('Live scores sent.');
+  res.status(200).send('Live scores sent.');
 };
